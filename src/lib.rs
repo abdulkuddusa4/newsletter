@@ -1,5 +1,7 @@
 #![allow(warnings)]
 
+use std::net::TcpListener;
+
 use actix_web::{
     web,
     App,
@@ -21,12 +23,12 @@ async fn health_check(req: HttpRequest) -> impl Responder {
 }
 
 
-pub fn run() -> std::io::Result<Server> {
+pub fn run(listener: TcpListener) -> std::io::Result<Server> {
 	let server: Server = HttpServer::new(|| {
 		App::new()
 		.route("/health_check", web::get().to(health_check))
 	})
-	.bind("127.0.0.1:8000")?
+	.listen(listener)?
 	.run();
 	Ok(server)
 }

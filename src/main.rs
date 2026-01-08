@@ -1,5 +1,6 @@
 #![allow(warnings,dead_code, unused_variables)]
 
+use std::net::TcpListener;
 use actix_web::{
     web,
     App,
@@ -21,5 +22,10 @@ async fn health_check(req: HttpRequest) -> impl Responder {
 use newsletter::run;
 #[actix_web::main]
 async fn main(){
-    run().unwrap().await;
+    let listener = TcpListener::bind("127.0.0.1:7788").unwrap();
+    dbg!(format!(
+        "server will start @{}",
+        listener.local_addr().unwrap().port()
+    ));
+    run(listener).unwrap().await;
 }
