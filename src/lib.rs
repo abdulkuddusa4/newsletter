@@ -1,4 +1,8 @@
 #![allow(warnings)]
+pub mod configuration;
+pub mod routes;
+pub mod startup;
+
 
 use std::net::TcpListener;
 
@@ -23,10 +27,28 @@ async fn health_check(req: HttpRequest) -> impl Responder {
 }
 
 
+#[derive(serde::Deserialize)]
+struct FormData{
+	email: String,
+	name: String
+}
+
+
+#[actix_web::post("/subscriptions")]
+async fn subscribe(
+	_form: web::Form<FormData>
+)
+-> HttpResponse
+{
+    HttpResponse::Ok().finish()
+}
+
+
 pub fn run(listener: TcpListener) -> std::io::Result<Server> {
 	let server: Server = HttpServer::new(|| {
 		App::new()
 		.route("/health_check", web::get().to(health_check))
+		.service(subscribe)
 	})
 	.listen(listener)?
 	.run();

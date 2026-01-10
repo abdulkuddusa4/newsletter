@@ -19,6 +19,7 @@ async fn health_check(req: HttpRequest) -> impl Responder {
     HttpResponse::Ok().finish()
 }
 
+
 use newsletter::run;
 #[actix_web::main]
 async fn main(){
