@@ -1,8 +1,13 @@
 #![allow(warnings)]
 
-use newsletter;
+use newsletter::startup::run as newsletter_runner;
 use urlencoding as urlencode;
 use std::net::TcpListener;
+
+use newsletter::configuration::get_configuration;
+
+use sqlx::{PgConnection, Connection};
+// use sqlx_postgres::PgConnection;
 
 fn print_type_of<T>(obj: &T){
 	println!("{:?}", std::any::type_name::<T>());
@@ -12,7 +17,7 @@ fn spawn_app()->String{
 		.expect("couldn't found any open port.");
 	let port:u16 = listener.local_addr().unwrap().port();
 
-	let server = newsletter::run(listener).expect("sdf");
+	let server = newsletter_runner(listener).expect("sdf");
 	tokio::spawn(server);
 	return format!("127.0.0.1:{}", port);
 }
@@ -39,6 +44,22 @@ async fn health_check_works() {
 async fn subscribe_returns_a_200_valid_form_data() {
 	let addr: String = spawn_app();
 
+	let configuration = get_configuration()
+		.expect("failed to load config");
+
+	let db_connection_string = configuration.database.connection_string();
+
+	let mut db_connection = PgConnection::connect(&db_connection_string)
+		.await
+		.expect("Faield to connect to postgres");
+	
+	let saved = sqlx::query!("SELECT email, name FROM subscriptions",)
+		.fetch_one(&mut db_connection)
+		.await
+		.expect("Failed to fetch saved subscription.");
+
+	assert_eq!(saved.email, "ursula_le_guin@gmail.com");
+	assert_eq!(saved.name, "le guin");
 	let client = reqwest::Client::new();
 
 	let form_data = urlencode::encode("name=roni&email=abc@gmail.com")

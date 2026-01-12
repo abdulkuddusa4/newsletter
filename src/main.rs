@@ -1,32 +1,12 @@
-#![allow(warnings,dead_code, unused_variables)]
-
 use std::net::TcpListener;
-use actix_web::{
-    web,
-    App,
-    HttpRequest,
-    HttpServer,
-    Responder,
-    HttpResponse
-};
+use newsletter::startup::run;
+use newsletter::configuration::get_configuration;
 
-async fn greet(req: HttpRequest) -> impl Responder {
-    let name = req.match_info().get("name").unwrap_or("World");
-    format!("Hello {}!", &name)
-}
+#[tokio::main]
+async fn main() -> std::io::Result<()> {
 
-async fn health_check(req: HttpRequest) -> impl Responder {
-    HttpResponse::Ok().finish()
-}
-
-
-use newsletter::run;
-#[actix_web::main]
-async fn main(){
-    let listener = TcpListener::bind("127.0.0.1:7788").unwrap();
-    dbg!(format!(
-        "server will start @{}",
-        listener.local_addr().unwrap().port()
-    ));
-    run(listener).unwrap().await;
+    let configuration = get_configuration().expect("Failed to read configuration.");
+    let address = format!("127.0.0.1:{}", configuration.application_port);
+    let listener = TcpListener::bind(address)?;
+    run(listener)?.await
 }
