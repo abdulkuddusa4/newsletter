@@ -16,13 +16,15 @@ use crate::routes::check;
 
 pub fn run(
 	listener: TcpListener,
-	db_connection: sqlx::PgConnection
+	db_pool: sqlx::PgPool
 ) -> std::io::Result<Server> {
-	let server: Server = HttpServer::new(|| {
+
+	let db_pool = web::Data::new(db_pool);
+	let server: Server = HttpServer::new(move || {
 		App::new()
 		.route("/health_check", web::get().to(check))
 		.service(subscribe)
-		.app_data(db_connection.clone())
+		.app_data(db_pool.clone())
 	})
 	.listen(listener)?
 	.run();

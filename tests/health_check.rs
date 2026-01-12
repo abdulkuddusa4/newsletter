@@ -6,18 +6,28 @@ use std::net::TcpListener;
 
 use newsletter::configuration::get_configuration;
 
-use sqlx::{PgConnection, Connection};
+use sqlx::{PgConnection, PgPool, Connection};
 // use sqlx_postgres::PgConnection;
 
 fn print_type_of<T>(obj: &T){
 	println!("{:?}", std::any::type_name::<T>());
 }
-fn spawn_app()->String{
+async fn spawn_app()->String{
 	let listener = TcpListener::bind("127.0.0.1:0")
 		.expect("couldn't found any open port.");
 	let port:u16 = listener.local_addr().unwrap().port();
 
-	let server = newsletter_runner(listener).expect("sdf");
+	let configuration = 
+		get_configuration()
+		.expect("Failed to laod config");
+
+	let db_pool = PgPool::connect(
+		&configuration.database.connection_string()
+	)
+	.await
+	.expect("Failed to connect to Postgres.");
+
+	let server = newsletter_runner(listener, db_pool).expect("sdf");
 	tokio::spawn(server);
 	return format!("127.0.0.1:{}", port);
 }
@@ -26,7 +36,7 @@ fn spawn_app()->String{
 #[tokio::test]
 async fn health_check_works() {
 	// Arrange
-	let addr: String = spawn_app();
+	let addr: String = spawn_app().await;
 
 	let client = reqwest::Client::new();
 	let response = client
@@ -42,7 +52,7 @@ async fn health_check_works() {
 
 #[tokio::test]
 async fn subscribe_returns_a_200_valid_form_data() {
-	let addr: String = spawn_app();
+	let addr: String = spawn_app().await;
 
 	let configuration = get_configuration()
 		.expect("failed to load config");
@@ -86,7 +96,7 @@ async fn subscribe_returns_a_200_valid_form_data() {
 // #[tokio::test]
 async fn subscribe_returns_a_400_when_data_is_missing() {
 	// Arrange
-	let app_address = spawn_app();
+	let app_address = spawn_app().await;
 	let client = reqwest::Client::new();
 	let test_cases = vec![
 		("name=le%20guin", "missing the email"),
