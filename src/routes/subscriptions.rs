@@ -21,7 +21,7 @@ async fn subscribe(
 )
 -> HttpResponse
 {
-	sqlx::query!(
+	match sqlx::query!(
 		r#"
 		INSERT INTO subscriptions (id, email, name, subscribed_at)
 		VALUES ($1, $2, $3, $4)	
@@ -32,7 +32,12 @@ async fn subscribe(
 		Utc::now()
 	)
 	.execute(db_connection.get_ref())
-	.await;
-    HttpResponse::Ok().finish()
+	.await{
+		Ok(_) => HttpResponse::Ok().finish(),
+		Err(e) =>{
+			println!("failed to execute query {}", e);
+			HttpResponse::InternalServerError().finish()
+		}
+	}
 }
 
